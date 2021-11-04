@@ -51,7 +51,7 @@ def upload():
         path_file = os.path.join(tmpdir, name)
         file.save(path_file)
         file_out = handler.handle(path_file)
-        return send_file(file_out)
+        return send_file(file_out, as_attachment=True, attachment_filename=file.filename)
 
 
 def run_api(app: Flask):

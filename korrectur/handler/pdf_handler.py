@@ -50,4 +50,4 @@ class PdfHandler:
             yield from images
             first_page += 1
             images = convert_from_path(pdf_path=path, first_page=first_page, last_page=first_page)
-            print("Get pages from {} to {} from {}".format(first_page, first_page + 1, total))
+            print("Get pages from {:03d} to {:03d} from {}".format(first_page, first_page + 1, total))
