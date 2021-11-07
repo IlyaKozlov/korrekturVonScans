@@ -43,7 +43,7 @@ def upload():
                                   mimetype='text/html;charset=utf-8')
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        file_name, extension = file.filename.rsplit(".")
+        file_name, extension = file.filename.rsplit(".", maxsplit=1)
         name = random_string(3) + ".{}".format(extension)
         path_file = os.path.join(tmpdir, name)
         file.save(path_file)
