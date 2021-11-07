@@ -1,4 +1,5 @@
 import os.path
+import subprocess
 from typing import Optional, Iterable
 
 from PyPDF2 import PdfFileMerger
@@ -6,15 +7,22 @@ from PIL.Image import Image
 from pdf2image import convert_from_path
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfdocument import PDFDocument
-from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfinterp import resolve1
 
 import pytesseract
 
+from errors.korrektur_base_exception import KorrekturConversionException
+
 
 class PdfHandler:
 
+    def __init__(self, timeout: int = 180) -> None:
+        super().__init__()
+        self.timeout = timeout
+
     def handle(self, path: str, lang: str = "eng+rus") -> str:
+        if path.endswith(".djvu"):
+            path = self._convert(path)
         total = self._get_page_num(path)
         base_name = os.path.basename(path).split('.')[0]
         dir_name = os.path.dirname(path)
@@ -33,6 +41,28 @@ class PdfHandler:
         path_out = os.path.join(dir_name, "result.pdf")
         merger.write(path_out)
         return path_out
+
+    def _convert(self, path: str) -> str:
+        """
+        convert file path and return path to the converted file
+        :param path: path to source file
+        :return: path to result file
+        """
+        if path.endswith(".pdf"):
+            return path
+        elif path.endswith("djvu"):
+            path_out = path.replace(".djvu", ".pdf")
+            command = ["ddjvu", "-format=pdf", "-quality=85", "-verbose", path, path_out]
+            conversion_results = subprocess.run(command,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE,
+                                                timeout=self.timeout)
+            error_message = conversion_results.stderr.decode().strip()
+            if len(error_message) > 0:
+                print(error_message)
+            return path_out
+        else:
+            raise KorrekturConversionException(msg="cannot convert {}".format(os.path.basename(path)))
 
     def _get_page_num(self, path: str) -> int:
         try:

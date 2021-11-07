@@ -9,7 +9,7 @@ ENV PYTHONPATH /korrectur/
 
 
 RUN apt update && apt install -y python3 python3-pip  libjpeg-dev libtesseract-dev libleptonica-dev tesseract-ocr-rus \
-    tesseract-ocr python3-pil  python-poppler poppler-utils
+    tesseract-ocr python3-pil  python-poppler poppler-utils djvulibre-bin
 ADD requirements.txt .
 ADD korrectur /korrectur
 RUN pip3 install --upgrade pip

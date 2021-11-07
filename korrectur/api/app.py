@@ -1,26 +1,17 @@
 import os.path
-import random
 import tempfile
 
 from flask import Flask, request
 from flask import send_file
-from xkcdpass import xkcd_password as xp
 
 from handler.pdf_handler import PdfHandler
+from utils import random_string
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), "static"))
 
 PORT = 1213
 
-
 handler = PdfHandler()
-
-
-def random_string(n):
-    wordfile = xp.locate_wordfile()
-    mywords = xp.generate_wordlist(wordfile=wordfile, min_length=5, max_length=8)
-    words = xp.generate_xkcdpassword(mywords, numwords=n).split()
-    return "".join(map(str.capitalize, words)) + str(random.randint(0, 100))
 
 
 @app.route('/', methods=['GET'])
@@ -42,16 +33,22 @@ def get_static_file():
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'file' not in request.files or request.files['file'] is None or request.files['file'].filename == "":
-        raise ValueError("Error: Missing content in request_post file parameter")
+        return app.response_class(response="Error: Missing content in request_post file parameter",
+                                  status=400,
+                                  mimetype='text/html;charset=utf-8')
     file = request.files['file']
-    if not file.filename.endswith(".pdf"):
-        raise ValueError("Bad file format {}".format(file.filename))
+    if not file.filename.endswith((".pdf", ".djvu")):
+        return app.response_class(response="Bad file format {}".format(file.filename),
+                                  status=400,
+                                  mimetype='text/html;charset=utf-8')
+
     with tempfile.TemporaryDirectory() as tmpdir:
-        name = random_string(3) + ".pdf"
+        file_name, extension = file.filename.rsplit(".")
+        name = random_string(3) + ".{}".format(extension)
         path_file = os.path.join(tmpdir, name)
         file.save(path_file)
         file_out = handler.handle(path_file)
-        return send_file(file_out, as_attachment=True, attachment_filename=file.filename)
+        return send_file(file_out, as_attachment=True, attachment_filename=file_name + ".pdf")
 
 
 def run_api(app: Flask):
