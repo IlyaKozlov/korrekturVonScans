@@ -21,12 +21,26 @@
 
 <body class="body-upload">
 <div id="Tab" class="container">
- <form class="box" method="post" style="margin: 10px" enctype=multipart/form-data action="/upload">
-    <div class="row">
-        <div class="col-md-3"><input type=file name=file class="btn btn-default" data-buttonText="Choose file"></div>
-        <div class="col-md-2"><input type=submit value=Upload class="btn btn-default"></div>
-    </div>
-     </form>
+    <form class="box" method="post" style="margin: 10px" enctype=multipart/form-data action="/upload">
+        <div class="row">
+            <div class="col-md-3"><input type=file name=file class="btn btn-default" data-buttonText="Choose file">
+            </div>
+        </div>
+        <div class="row">
+            <label>
+                <select name="language">
+                    <option value="rus" selected>rus</option>
+                    <option value="eng">eng</option>
+                    <option value="srp+srp_latn">srb</option>
+                </select>
+            </label> language
+        </div>
+        <div class="row">
+            <div class="col-md-2"><input type=submit value=Upload class="btn btn-default"></div>
+        </div>
+
+</div>
+</form>
 </div>
 </body>
 </html>

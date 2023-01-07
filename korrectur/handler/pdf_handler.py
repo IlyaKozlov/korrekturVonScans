@@ -1,6 +1,6 @@
 import os.path
 import subprocess
-from typing import Optional, Iterable
+from typing import Optional, Iterable, List
 
 from PyPDF2 import PdfFileMerger
 from PIL.Image import Image
@@ -10,6 +10,7 @@ from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import resolve1
 
 import pytesseract
+from pytesseract import get_languages
 
 from errors.korrektur_base_exception import KorrekturConversionException
 
@@ -21,13 +22,19 @@ class PdfHandler:
         self.timeout = timeout
 
     def handle(self, path: str, lang: str = "eng+rus") -> str:
+        print(f"lang {lang}")
         if path.endswith(".djvu"):
             path = self._convert(path)
         total = self._get_page_num(path)
         base_name = os.path.basename(path).split('.')[0]
         dir_name = os.path.dirname(path)
         images_path = []
+        print(path)
         for image_num, image in enumerate(self._get_images(path, total)):
+            x, y = image.size
+            x = x // 3
+            y = y // 3
+            image = image.resize((x, y))
             pdf_path = os.path.join(dir_name, "{}_{:06d}.pdf".format(base_name, image_num))
             pdf = pytesseract.image_to_pdf_or_hocr(image, extension='pdf', lang=lang)
             with open(pdf_path, 'w+b') as f:
@@ -81,3 +88,7 @@ class PdfHandler:
             first_page += 1
             images = convert_from_path(pdf_path=path, first_page=first_page, last_page=first_page)
             print("Get pages from {:03d} to {:03d} from {}".format(first_page, first_page + 1, total))
+
+    @staticmethod
+    def get_languages() -> List[str]:
+        return get_languages()

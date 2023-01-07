@@ -30,6 +30,11 @@ def get_static_file():
     return app.send_static_file(file)
 
 
+@app.route('/languages', methods=['GET'])
+def get_languages():
+    return "\n".join(handler.get_languages())
+
+
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'file' not in request.files or request.files['file'] is None or request.files['file'].filename == "":
@@ -37,6 +42,7 @@ def upload():
                                   status=400,
                                   mimetype='text/html;charset=utf-8')
     file = request.files['file']
+    language = request.values['language']
     if not file.filename.endswith((".pdf", ".djvu")):
         return app.response_class(response="Bad file format {}".format(file.filename),
                                   status=400,
@@ -47,7 +53,7 @@ def upload():
         name = random_string(3) + ".{}".format(extension)
         path_file = os.path.join(tmpdir, name)
         file.save(path_file)
-        file_out = handler.handle(path_file)
+        file_out = handler.handle(path_file, lang=language)
         return send_file(file_out, as_attachment=True, attachment_filename=file_name + ".pdf")
 
 
