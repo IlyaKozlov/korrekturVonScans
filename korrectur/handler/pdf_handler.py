@@ -21,6 +21,10 @@ class PdfHandler:
         super().__init__()
         self.timeout = timeout
 
+    @staticmethod
+    def _convert_image(image: Image) -> Image:
+        return image
+
     def handle(self, path: str, lang: str = "eng+rus") -> str:
         print(f"lang {lang}")
         if path.endswith(".djvu"):
@@ -30,11 +34,7 @@ class PdfHandler:
         dir_name = os.path.dirname(path)
         images_path = []
         print(path)
-        for image_num, image in enumerate(self._get_images(path, total)):
-            x, y = image.size
-            x = x // 3
-            y = y // 3
-            image = image.resize((x, y))
+        for image_num, image in enumerate(map(PdfHandler._convert_image, self._get_images(path, total))):
             pdf_path = os.path.join(dir_name, "{}_{:06d}.pdf".format(base_name, image_num))
             pdf = pytesseract.image_to_pdf_or_hocr(image, extension='pdf', lang=lang)
             with open(pdf_path, 'w+b') as f:

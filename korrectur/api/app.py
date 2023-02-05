@@ -5,6 +5,7 @@ from flask import Flask, request
 from flask import send_file
 
 from handler.pdf_handler import PdfHandler
+from installer.language_installer import LanguageInstaller
 from utils import random_string
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), "static"))
@@ -12,6 +13,7 @@ app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), "sta
 PORT = 1213
 
 handler = PdfHandler()
+installer = LanguageInstaller()
 
 
 @app.route('/', methods=['GET'])
@@ -43,6 +45,7 @@ def upload():
                                   mimetype='text/html;charset=utf-8')
     file = request.files['file']
     language = request.values['language']
+    installer.install_language(language)
     if not file.filename.endswith((".pdf", ".djvu")):
         return app.response_class(response="Bad file format {}".format(file.filename),
                                   status=400,
