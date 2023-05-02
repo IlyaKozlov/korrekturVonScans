@@ -1,8 +1,13 @@
 import os.path
+import shutil
 import subprocess
+import tempfile
 from typing import Optional, Iterable, List
 
-from PyPDF2 import PdfFileMerger
+from PyPDF2 import PdfFileMerger, PdfFileWriter, PdfFileReader
+from PyPDF2.pdf import PageObject
+from tqdm import tqdm
+import PIL
 from PIL.Image import Image
 from pdf2image import convert_from_path
 from pdfminer.pdfparser import PDFParser
@@ -12,6 +17,7 @@ from pdfminer.pdfinterp import resolve1
 import pytesseract
 from pytesseract import get_languages
 
+from color_corrector.color_corrector import ColorCorrector
 from errors.korrektur_base_exception import KorrekturConversionException
 
 
@@ -20,10 +26,24 @@ class PdfHandler:
     def __init__(self, timeout: int = 180) -> None:
         super().__init__()
         self.timeout = timeout
+        self.color_corrector = ColorCorrector()
 
     @staticmethod
     def _convert_image(image: Image) -> Image:
         return image
+
+    def _compress(self, path: str) -> None:
+        path_out = path + "_out"
+        reader = PdfFileReader(path)
+        writer = PdfFileWriter()
+
+        for page in tqdm(reader.pages, desc="compress"):
+            page.compressContentStreams()  # This is CPU intensive!
+            writer.addPage(page)
+
+        with open(path_out, "wb") as f:
+            writer.write(f)
+        shutil.move(path_out, path)
 
     def handle(self, path: str, lang: str = "eng+rus") -> str:
         print(f"lang {lang}")
@@ -35,6 +55,7 @@ class PdfHandler:
         images_path = []
         print(path)
         for image_num, image in enumerate(map(PdfHandler._convert_image, self._get_images(path, total))):
+            image = self.color_corrector.handle_image(image)
             pdf_path = os.path.join(dir_name, "{}_{:06d}.pdf".format(base_name, image_num))
             pdf = pytesseract.image_to_pdf_or_hocr(image, extension='pdf', lang=lang)
             with open(pdf_path, 'w+b') as f:
@@ -47,6 +68,7 @@ class PdfHandler:
 
         path_out = os.path.join(dir_name, "result.pdf")
         merger.write(path_out)
+        self._compress(path_out)
         return path_out
 
     def _convert(self, path: str) -> str:
@@ -81,13 +103,20 @@ class PdfHandler:
             return 0
 
     def _get_images(self, path: str, total: Optional[int] = None) -> Iterable[Image]:
-        first_page = 1
-        images = convert_from_path(pdf_path=path, first_page=first_page, last_page=first_page)
-        while len(images) > 0:
-            yield from images
-            first_page += 1
-            images = convert_from_path(pdf_path=path, first_page=first_page, last_page=first_page)
-            print("Get pages from {:03d} to {:03d} from {}".format(first_page, first_page + 1, total))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            paths = []
+            first_page = 1
+            images: List[Image] = convert_from_path(pdf_path=path, first_page=first_page, last_page=first_page)
+            while len(images) > 0:
+                for image in images:
+                    path_out = "{}/{:04d}.webp".format(tmpdir, len(paths))
+                    image.save(path_out)
+                    paths.append(path_out)
+                first_page += 1
+                images = convert_from_path(pdf_path=path, first_page=first_page, last_page=first_page)
+                print("Get pages from {:03d} to {:03d} from {}".format(first_page, first_page + 1, total))
+            for image_path in tqdm(paths):
+                yield PIL.Image.open(image_path)
 
     @staticmethod
     def get_languages() -> List[str]:

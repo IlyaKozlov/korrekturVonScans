@@ -11,7 +11,9 @@ ENV PYTHONPATH /korrectur/
 RUN apt update && apt install -y python3 python3-pip  libjpeg-dev libtesseract-dev libleptonica-dev tesseract-ocr-rus \
     tesseract-ocr python3-pil  python-poppler poppler-utils djvulibre-bin
 ADD requirements.txt .
+ADD resources /resources
 ADD korrectur /korrectur
 RUN pip3 install --upgrade pip
+RUN echo 1
 RUN pip3 install -r requirements.txt
 CMD ["python3", "/korrectur/api/app.py"]
