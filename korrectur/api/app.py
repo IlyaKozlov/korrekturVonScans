@@ -56,7 +56,7 @@ def upload():
         name = random_string(3) + ".{}".format(extension)
         path_file = os.path.join(tmpdir, name)
         file.save(path_file)
-        file_out = handler.handle(path_file, lang=language)
+        file_out = handler.handle(path_file, lang=language, tmpdir=tmpdir)
         return send_file(file_out, as_attachment=True, attachment_filename=file_name + ".pdf")
 
 

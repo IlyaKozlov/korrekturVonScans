@@ -1,9 +1,12 @@
+import glob
 import os.path
 import shutil
 import subprocess
 import tempfile
 from typing import Optional, Iterable, List
 
+import img2pdf
+import ocrmypdf
 from PyPDF2 import PdfFileMerger, PdfFileWriter, PdfFileReader
 from PyPDF2.pdf import PageObject
 from tqdm import tqdm
@@ -28,48 +31,31 @@ class PdfHandler:
         self.timeout = timeout
         self.color_corrector = ColorCorrector()
 
-    @staticmethod
-    def _convert_image(image: Image) -> Image:
-        return image
 
-    def _compress(self, path: str) -> None:
-        path_out = path + "_out"
-        reader = PdfFileReader(path)
-        writer = PdfFileWriter()
-
-        for page in tqdm(reader.pages, desc="compress"):
-            page.compressContentStreams()  # This is CPU intensive!
-            writer.addPage(page)
-
-        with open(path_out, "wb") as f:
-            writer.write(f)
-        shutil.move(path_out, path)
-
-    def handle(self, path: str, lang: str = "eng+rus") -> str:
+    def handle(self, path: str, tmpdir: str, lang: str = "eng+rus") -> str:
         print(f"lang {lang}")
         if path.endswith(".djvu"):
             path = self._convert(path)
         total = self._get_page_num(path)
         base_name = os.path.basename(path).split('.')[0]
-        dir_name = os.path.dirname(path)
         images_path = []
-        print(path)
-        for image_num, image in enumerate(map(PdfHandler._convert_image, self._get_images(path, total))):
-            image = self.color_corrector.handle_image(image)
-            pdf_path = os.path.join(dir_name, "{}_{:06d}.pdf".format(base_name, image_num))
-            pdf = pytesseract.image_to_pdf_or_hocr(image, extension='pdf', lang=lang)
-            with open(pdf_path, 'w+b') as f:
-                f.write(pdf)  # pdf type is bytes by default
-            images_path.append(pdf_path)
 
-        merger = PdfFileMerger()
-        for pdf in images_path:
-            merger.append(pdf)
+        for i, image in enumerate(tqdm(self._get_images(path), total=total)):
+            image_corrected = self.color_corrector.handle_image(image)
+            path_out = os.path.join(tmpdir, f"page_{i:04d}.jpg")
+            image_corrected.save(path_out, quality=50)
+            images_path.append(path_out)
 
-        path_out = os.path.join(dir_name, "result.pdf")
-        merger.write(path_out)
-        self._compress(path_out)
-        return path_out
+        pdf_path_in = os.path.join(tmpdir, "name.pdf")
+        pdf_path_out_part = os.path.join(tmpdir, f"{base_name}_part.pdf")
+        pdf_path_out = os.path.join(tmpdir, f"{base_name}.pdf")
+
+        with open(pdf_path_in, "wb") as file_out:
+            file_out.write(img2pdf.convert(images_path))
+
+        ocrmypdf.ocr(pdf_path_in, language=lang, output_file=pdf_path_out_part, optimize=3, deskew=False)
+        shutil.move(pdf_path_out_part, pdf_path_out)
+        return pdf_path_out
 
     def _convert(self, path: str) -> str:
         """
