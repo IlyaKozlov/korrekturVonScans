@@ -13,3 +13,6 @@ ocrmypdf==12.7.2
 tqdm==4.64.1
 Werkzeug==2.0.2
 xkcdpass==1.19.3
+
+azureml-mlflow==1.48.0
+mlflow==1.23.1

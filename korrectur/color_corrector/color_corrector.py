@@ -32,7 +32,7 @@ class ColorCorrector:
         array_copy = deepcopy(image_array)
         is_white = (predictions == "white")
         h, w, c = image_array.shape
-        step = 10
+        step = 25
 
         mean_prev = image_array[is_white].mean(axis=0)
         for col in range(0, h + step, step):
@@ -47,18 +47,22 @@ class ColorCorrector:
                 fixed[fixed > 255] = 255
                 fixed = fixed.astype(np.uint8)
                 window_small[:, :, :] = fixed
-        array_copy[array_copy.max(axis=2) < 75] = 0
         return array_copy
 
-    def _get_mean(self, col: int, row: int, is_white: np.ndarray, image_array: np.ndarray) -> Optional[np.ndarray]:
+    def _get_mean(self,
+                  col: int,
+                  row: int,
+                  is_white: np.ndarray,
+                  image_array: np.ndarray) -> Optional[np.ndarray]:
         width = 60
+        height = 20
         h, w, _ = image_array.shape
         left = max(0, col - width // 2)
         right = min(col + width // 2, h)
-        top = max(0, row - width // 2)
-        bottom = min(row + width // 2, w)
+        top = max(0, row - height // 2)
+        bottom = min(row + height // 2, w)
         window = image_array[left: right, top: bottom, :]
-        window_mask = (is_white[left: right, top: bottom])
+        window_mask = is_white[left: right, top: bottom]
         if window_mask.mean() > 0.20:
             mean = window[window_mask].mean(axis=0)
             return mean
